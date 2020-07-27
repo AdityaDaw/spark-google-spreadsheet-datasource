@@ -14,7 +14,8 @@ class GoogleSpreadsheetDatasource extends DataSourceV2 with ReadSupport {
     new GoogleSpreadsheetDataSourceReader(
       options.get("spreadsheetId").get(),
       options.get("sheetName").get(),
-      options.get("credentialsPath").get()
+      options.get("credentialsPath").get(),
+      options.getInt("bufferSizeOfEachPartition",10)
     )
   }
 

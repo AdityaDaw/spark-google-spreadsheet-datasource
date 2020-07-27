@@ -17,8 +17,8 @@ import scala.collection.JavaConverters._
 class GoogleSpreadsheetDataSourceReader(
                                          spreadsheetId: String,
                                          sheetName: String,
-                                         credentialsPath: String
-                                       ) extends DataSourceReader {
+                                         credentialsPath: String,
+                                         bufferSizeOfEachPartition: Int) extends DataSourceReader {
 
   private val numPartitions = SparkSession.getActiveSession.get.sparkContext.defaultParallelism
 
@@ -44,8 +44,9 @@ class GoogleSpreadsheetDataSourceReader(
       .getSheets.get(0).getProperties.getGridProperties.getRowCount
     val step = Math.ceil(rowCount / numPartitions).toInt
     Range.inclusive(2, rowCount, step).map { i =>
-      new GoogleSpreadsheetInputPartition(credentialsPath, spreadsheetId, sheetName, i, Math.min(i + step - 1, rowCount))
-        .asInstanceOf[InputPartition[InternalRow]]
+      new GoogleSpreadsheetInputPartition(
+        credentialsPath, spreadsheetId, sheetName, i, Math.min(i + step - 1, rowCount), bufferSizeOfEachPartition
+      ).asInstanceOf[InputPartition[InternalRow]]
     }.toList.asJava
   }
 
