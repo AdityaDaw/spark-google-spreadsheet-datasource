@@ -20,51 +20,53 @@ class GoogleSpreadsheetInputPartition(
                                        sheetName: String,
                                        startOffset: Int,
                                        endOffset: Int,
-                                       bufferSize: Int) extends InputPartition[InternalRow] with Logging {
+                                       bufferSize: Int
+                                     ) extends InputPartition[InternalRow] with Logging {
 
-  override def createPartitionReader(): InputPartitionReader[InternalRow] = new InputPartitionReader[InternalRow] {
+  override def createPartitionReader(): InputPartitionReader[InternalRow] =
+    new InputPartitionReader[InternalRow] {
 
-    private var currentOffset = startOffset
+      private var currentOffset = startOffset
 
-    private var buffer: ju.List[ju.List[Object]] = _
+      private var buffer: ju.List[ju.List[Object]] = _
 
-    private var bufferIter: ju.Iterator[ju.List[Object]] = _
+      private var bufferIter: ju.Iterator[ju.List[Object]] = _
 
-    private val sheets: Sheets = new Sheets.Builder(
-      GoogleNetHttpTransport.newTrustedTransport,
-      JacksonFactory.getDefaultInstance,
-      new HttpCredentialsAdapter(GoogleCredentials.fromStream(
-        this.getClass.getClassLoader.getResourceAsStream(credentialsPath)
-      ).createScoped(SheetsScopes.SPREADSHEETS))
-    ).build()
+      private val sheets: Sheets = new Sheets.Builder(
+        GoogleNetHttpTransport.newTrustedTransport,
+        JacksonFactory.getDefaultInstance,
+        new HttpCredentialsAdapter(GoogleCredentials.fromStream(
+          this.getClass.getClassLoader.getResourceAsStream(credentialsPath)
+        ).createScoped(SheetsScopes.SPREADSHEETS))
+      ).build()
 
-    override def next(): Boolean = {
-      if (bufferIter != null && bufferIter.hasNext) {
-        return true
+      override def next(): Boolean = {
+        if (bufferIter != null && bufferIter.hasNext) {
+          return true
+        }
+        if (currentOffset > endOffset) {
+          return false
+        }
+        val end = (currentOffset + bufferSize) min endOffset
+        val range = s"$sheetName!$currentOffset:$end"
+        val rows = sheets.spreadsheets().values()
+          .get(spreadsheetId, range).execute().getValues
+        if (rows == null || rows.isEmpty) {
+          return false
+        }
+        logInfo(s"read ${rows.size} rows from $range")
+        buffer = rows
+        bufferIter = rows.iterator()
+        currentOffset = end + 1
+        true
       }
-      if (currentOffset > endOffset) {
-        return false
+
+      override def get(): InternalRow = {
+        val curRow = bufferIter.next.asScala.map(f => UTF8String.fromString(String.valueOf(f)))
+        InternalRow(curRow: _*)
       }
-      val end = (currentOffset + bufferSize) min endOffset
-      val range = s"$sheetName!$currentOffset:$end"
-      val rows = sheets.spreadsheets().values()
-        .get(spreadsheetId, range).execute().getValues
-      if (rows == null || rows.isEmpty) {
-        return false
-      }
-      logInfo(s"read ${rows.size} rows from $range")
-      buffer = rows
-      bufferIter = rows.iterator()
-      currentOffset = end + 1
-      true
+
+      override def close(): Unit = {}
     }
-
-    override def get(): InternalRow = {
-      val curRow = bufferIter.next.asScala.map(f => UTF8String.fromString(String.valueOf(f)))
-      InternalRow(curRow: _*)
-    }
-
-    override def close(): Unit = {}
-  }
 
 }

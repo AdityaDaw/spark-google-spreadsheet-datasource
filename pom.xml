@@ -75,6 +75,13 @@
             <artifactId>google-auth-library-oauth2-http</artifactId>
             <version>0.21.1</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.scalatest</groupId>
+            <artifactId>scalatest_${scala.binary.version}</artifactId>
+            <version>3.0.3</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

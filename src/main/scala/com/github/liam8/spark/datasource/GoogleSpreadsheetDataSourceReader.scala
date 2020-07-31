@@ -18,11 +18,12 @@ class GoogleSpreadsheetDataSourceReader(
                                          spreadsheetId: String,
                                          sheetName: String,
                                          credentialsPath: String,
-                                         bufferSizeOfEachPartition: Int) extends DataSourceReader {
+                                         bufferSizeOfEachPartition: Int
+                                       ) extends DataSourceReader {
 
   private val numPartitions = SparkSession.getActiveSession.get.sparkContext.defaultParallelism
 
-  private val sheets: Sheets = new Sheets.Builder(
+  private lazy val sheets: Sheets = new Sheets.Builder(
     GoogleNetHttpTransport.newTrustedTransport,
     JacksonFactory.getDefaultInstance,
     new HttpCredentialsAdapter(GoogleCredentials.fromStream(
@@ -45,7 +46,12 @@ class GoogleSpreadsheetDataSourceReader(
     val step = Math.ceil(rowCount / numPartitions).toInt
     Range.inclusive(2, rowCount, step).map { i =>
       new GoogleSpreadsheetInputPartition(
-        credentialsPath, spreadsheetId, sheetName, i, Math.min(i + step - 1, rowCount), bufferSizeOfEachPartition
+        credentialsPath,
+        spreadsheetId,
+        sheetName,
+        i,
+        Math.min(i + step - 1, rowCount),
+        bufferSizeOfEachPartition
       ).asInstanceOf[InputPartition[InternalRow]]
     }.toList.asJava
   }

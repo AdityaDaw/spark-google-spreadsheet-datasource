@@ -2,7 +2,7 @@ package com.github.liam8.spark.datasource
 
 import org.apache.spark.sql.SparkSession
 
-object Main {
+object ExampleMain {
 
   private val spark: SparkSession =
     SparkSession.builder()
