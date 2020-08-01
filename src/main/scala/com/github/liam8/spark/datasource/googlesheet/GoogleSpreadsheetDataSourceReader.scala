@@ -39,7 +39,7 @@ class GoogleSpreadsheetDataSourceReader(
     val head = sheets.spreadsheets().values()
       .get(spreadsheetId, s"$sheetName!1:1").execute().getValues.asScala
     if (head.isEmpty) {
-      throw GoogleSpreadsheetDatasourceException("Can not refer schema from empty sheet.")
+      throw GoogleSpreadsheetDataSourceException("Can not refer schema from empty sheet.")
     }
     StructType(head.head.asScala.map(v => StructField(v.toString, StringType, nullable = true)))
   }

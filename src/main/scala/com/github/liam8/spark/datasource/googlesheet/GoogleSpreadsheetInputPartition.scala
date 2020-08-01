@@ -88,7 +88,7 @@ class GoogleSpreadsheetInputPartitionReader(
         case ShortType => v.toShort
         case DateType => DateTimeUtils.stringToDate(UTF8String.fromString(v))
         case TimestampType => DateTimeUtils.stringToTimestamp(UTF8String.fromString(v))
-        case t => throw GoogleSpreadsheetDatasourceException(s"Not support the $t type right now")
+        case t => throw GoogleSpreadsheetDataSourceException(s"Not support the $t type right now")
       }
     }
     InternalRow(curRow: _*)
