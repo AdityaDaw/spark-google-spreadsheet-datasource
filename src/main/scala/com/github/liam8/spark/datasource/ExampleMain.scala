@@ -10,7 +10,7 @@ object ExampleMain {
       .getOrCreate()
 
   def main(args: Array[String]): Unit = {
-    val data = spark.read.format("com.github.liam8.spark.datasource.GoogleSpreadsheetDatasource")
+    val data = spark.read.format("com.github.liam8.spark.datasource.googlesheet.GoogleSpreadsheetDatasource")
       .option("credentialsPath","service_account_credentials.json")
       .option("spreadsheetId","1pJIU-cFzemvuxuDJ7zssV1J2j80QvUiXMZiGy9Ujoa8")
       .option("sheetName","Sheet1")

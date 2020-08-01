@@ -1,4 +1,4 @@
-package com.github.liam8.spark.datasource
+package com.github.liam8.spark.datasource.googlesheet
 
 import java.util
 
@@ -18,7 +18,8 @@ class GoogleSpreadsheetDataSourceReader(
                                          spreadsheetId: String,
                                          sheetName: String,
                                          credentialsPath: String,
-                                         bufferSizeOfEachPartition: Int
+                                         bufferSizeOfEachPartition: Int,
+                                         schema: Option[StructType] = None
                                        ) extends DataSourceReader {
 
   private val numPartitions = SparkSession.getActiveSession.get.sparkContext.defaultParallelism
@@ -32,6 +33,9 @@ class GoogleSpreadsheetDataSourceReader(
   ).build()
 
   override def readSchema(): StructType = {
+    if (schema.nonEmpty) {
+      return schema.get
+    }
     val head = sheets.spreadsheets().values()
       .get(spreadsheetId, s"$sheetName!1:1").execute().getValues.asScala
     if (head.isEmpty) {
@@ -51,7 +55,8 @@ class GoogleSpreadsheetDataSourceReader(
         sheetName,
         i,
         Math.min(i + step - 1, rowCount),
-        bufferSizeOfEachPartition
+        bufferSizeOfEachPartition,
+        readSchema()
       ).asInstanceOf[InputPartition[InternalRow]]
     }.toList.asJava
   }
