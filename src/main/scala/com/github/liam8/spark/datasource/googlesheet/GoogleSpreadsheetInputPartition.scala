@@ -86,8 +86,10 @@ class GoogleSpreadsheetInputPartitionReader(
         case FloatType => v.toFloat
         case BooleanType => v.toBoolean
         case ShortType => v.toShort
-        case DateType => DateTimeUtils.stringToDate(UTF8String.fromString(v))
-        case TimestampType => DateTimeUtils.stringToTimestamp(UTF8String.fromString(v))
+        case DateType =>
+          DateTimeUtils.stringToDate(UTF8String.fromString(v)).getOrElse(null)
+        case TimestampType =>
+          DateTimeUtils.stringToTimestamp(UTF8String.fromString(v)).getOrElse(null)
         case t => throw GoogleSpreadsheetDataSourceException(s"Not support the $t type right now")
       }
     }
