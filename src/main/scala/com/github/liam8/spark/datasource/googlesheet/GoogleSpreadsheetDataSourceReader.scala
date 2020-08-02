@@ -9,7 +9,7 @@ import com.google.auth.http.HttpCredentialsAdapter
 import com.google.auth.oauth2.GoogleCredentials
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.sources.v2.reader.{DataSourceReader, InputPartition}
+import org.apache.spark.sql.sources.v2.reader.{DataSourceReader, InputPartition, SupportsPushDownRequiredColumns}
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
 
 import scala.collection.JavaConverters._
@@ -19,9 +19,9 @@ class GoogleSpreadsheetDataSourceReader(
   sheetName: String,
   credentialsPath: String,
   bufferSizeOfEachPartition: Int,
-  schema: Option[StructType] = None,
+  var schema: Option[StructType] = None,
   firstRowAsHeader: Boolean
-) extends DataSourceReader {
+) extends DataSourceReader with SupportsPushDownRequiredColumns {
 
   private val numPartitions = SparkSession.getActiveSession.get.sparkContext.defaultParallelism
 
@@ -31,17 +31,29 @@ class GoogleSpreadsheetDataSourceReader(
     new HttpCredentialsAdapter(GoogleCredentials.fromStream(
       this.getClass.getClassLoader.getResourceAsStream(credentialsPath)
     ).createScoped(SheetsScopes.SPREADSHEETS))
-  ).build()
+  ).setApplicationName("GoogleSpreadsheetDataSourceReader").build()
 
-  override def readSchema(): StructType = {
-    if (schema.nonEmpty) {
-      return schema.get
+  private var prunedSchema: Option[StructType] = None
+
+  override def readSchema(): StructType =
+    if (prunedSchema.nonEmpty) {
+      prunedSchema.get
+    } else {
+      originalSchema
     }
+
+  private def originalSchema = {
+    if (schema.isEmpty) {
+      schema = Option(inferSchema)
+    }
+    schema.get
+  }
+
+  private def inferSchema = {
     if (!firstRowAsHeader) {
       throw GoogleSpreadsheetDataSourceException(
         "can not infer schema without header, please specify schema manually")
     }
-
     val head = sheets.spreadsheets().values()
       .get(spreadsheetId, s"$sheetName!1:1").execute().getValues.asScala
     if (head.isEmpty) {
@@ -63,9 +75,14 @@ class GoogleSpreadsheetDataSourceReader(
         i,
         Math.min(i + step - 1, rowCount),
         bufferSizeOfEachPartition,
-        readSchema()
+        originalSchema,
+        prunedSchema
       ).asInstanceOf[InputPartition[InternalRow]]
     }.toList.asJava
+  }
+
+  override def pruneColumns(requiredSchema: StructType): Unit = {
+    prunedSchema = Option(requiredSchema)
   }
 
 }

@@ -28,7 +28,6 @@ class MainTest extends FunSuite {
       .option("sheetName", sheetName)
       .load()
     data.printSchema()
-    data.show(truncate = false)
     assert(data.schema.contains(StructField("b", DataTypes.StringType)))
     assert(data.count() > 0)
   }
@@ -49,7 +48,6 @@ class MainTest extends FunSuite {
       .schema(schema)
       .load()
     data.printSchema()
-    data.show(truncate = false)
     assert(data.schema.contains(StructField("day", DataTypes.DateType)))
     assert(data.schema.contains(StructField("ts", DataTypes.TimestampType)))
     assert(data.count() > 0)
@@ -57,7 +55,7 @@ class MainTest extends FunSuite {
 
   test("specify schema without header") {
     val schema = StructType(
-      StructField("a", DataTypes.StringType) ::  Nil
+      StructField("a", DataTypes.StringType) :: Nil
     )
 
     val data = spark.read.format(formatName)
@@ -68,19 +66,39 @@ class MainTest extends FunSuite {
       .schema(schema)
       .load()
     data.printSchema()
-    data.show(truncate = false)
     assert(data.schema.contains(StructField("a", DataTypes.StringType)))
-    assert(data.count() == 4)
+    assert(data.count() == 31)
   }
 
   test("infer schema without header") {
     assertThrows[GoogleSpreadsheetDataSourceException](
       spark.read.format(formatName)
+        .option("credentialsPath", credentialFile)
+        .option("spreadsheetId", spreadsheetId)
+        .option("sheetName", sheetName)
+        .option("firstRowAsHeader", value = false)
+        .load()
+    )
+  }
+
+  test("prune schema") {
+    val data = spark.read.format(formatName)
       .option("credentialsPath", credentialFile)
       .option("spreadsheetId", spreadsheetId)
       .option("sheetName", sheetName)
-      .option("firstRowAsHeader", value = false)
       .load()
-    )
+      .select("a", "b", "day")
+    data.printSchema()
+    data.show(truncate = false)
+    assert(data.schema.contains(StructField("b", DataTypes.StringType)))
+  }
+
+  test("row count") {
+    val data = spark.read.format(formatName)
+      .option("credentialsPath", credentialFile)
+      .option("spreadsheetId", spreadsheetId)
+      .option("sheetName", sheetName)
+      .load()
+    assert(data.count() == 30)
   }
 }
