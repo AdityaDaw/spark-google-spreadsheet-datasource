@@ -11,3 +11,4 @@
 dependency-reduced-pom.xml
 target
 
+src/main/resources/service_account_credentials.json

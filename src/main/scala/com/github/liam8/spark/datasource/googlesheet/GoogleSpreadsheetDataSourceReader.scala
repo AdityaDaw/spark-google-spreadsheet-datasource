@@ -15,12 +15,13 @@ import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import scala.collection.JavaConverters._
 
 class GoogleSpreadsheetDataSourceReader(
-                                         spreadsheetId: String,
-                                         sheetName: String,
-                                         credentialsPath: String,
-                                         bufferSizeOfEachPartition: Int,
-                                         schema: Option[StructType] = None
-                                       ) extends DataSourceReader {
+  spreadsheetId: String,
+  sheetName: String,
+  credentialsPath: String,
+  bufferSizeOfEachPartition: Int,
+  schema: Option[StructType] = None,
+  firstRowAsHeader: Boolean
+) extends DataSourceReader {
 
   private val numPartitions = SparkSession.getActiveSession.get.sparkContext.defaultParallelism
 
@@ -36,6 +37,11 @@ class GoogleSpreadsheetDataSourceReader(
     if (schema.nonEmpty) {
       return schema.get
     }
+    if (!firstRowAsHeader) {
+      throw GoogleSpreadsheetDataSourceException(
+        "can not infer schema without header, please specify schema manually")
+    }
+
     val head = sheets.spreadsheets().values()
       .get(spreadsheetId, s"$sheetName!1:1").execute().getValues.asScala
     if (head.isEmpty) {
@@ -48,7 +54,8 @@ class GoogleSpreadsheetDataSourceReader(
     val rowCount = sheets.spreadsheets().get(spreadsheetId).setFields("sheets.properties").execute()
       .getSheets.get(0).getProperties.getGridProperties.getRowCount
     val step = Math.ceil(rowCount / numPartitions).toInt
-    Range.inclusive(2, rowCount, step).map { i =>
+    val start = if (firstRowAsHeader) 2 else 1
+    Range.inclusive(start, rowCount, step).map { i =>
       new GoogleSpreadsheetInputPartition(
         credentialsPath,
         spreadsheetId,

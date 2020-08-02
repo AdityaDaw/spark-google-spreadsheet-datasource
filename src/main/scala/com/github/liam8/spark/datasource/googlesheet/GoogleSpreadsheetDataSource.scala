@@ -6,25 +6,25 @@ import org.apache.spark.sql.sources.v2.{DataSourceOptions, ReadSupport}
 import org.apache.spark.sql.types.StructType
 
 /**
- * @todo support specify schema
- *       specify header
+ * @todo support column pruning
  */
-  class GoogleSpreadsheetDataSource extends ReadSupport with DataSourceRegister {
+class GoogleSpreadsheetDataSource extends ReadSupport with DataSourceRegister {
 
-    override def createReader(options: DataSourceOptions): DataSourceReader = {
-      createReader(null, options)
-    }
-
-    override def createReader(schema: StructType, options: DataSourceOptions): DataSourceReader = {
-      new GoogleSpreadsheetDataSourceReader(
-        options.get("spreadsheetId").get(),
-        options.get("sheetName").get(),
-        options.get("credentialsPath").get(),
-        options.getInt("bufferSizeOfEachPartition", 10),
-        Option(schema)
-      )
-    }
-
-    override def shortName(): String = "google-spreadsheet"
+  override def createReader(options: DataSourceOptions): DataSourceReader = {
+    createReader(null, options)
   }
+
+  override def createReader(schema: StructType, options: DataSourceOptions): DataSourceReader = {
+    new GoogleSpreadsheetDataSourceReader(
+      options.get("spreadsheetId").get(),
+      options.get("sheetName").get(),
+      options.get("credentialsPath").get(),
+      options.getInt("bufferSizeOfEachPartition", 10),
+      Option(schema),
+      options.getBoolean("firstRowAsHeader", true)
+    )
+  }
+
+  override def shortName(): String = "google-spreadsheet"
+}
 

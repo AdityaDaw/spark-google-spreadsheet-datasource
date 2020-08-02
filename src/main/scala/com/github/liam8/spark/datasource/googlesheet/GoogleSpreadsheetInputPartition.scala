@@ -76,23 +76,25 @@ class GoogleSpreadsheetInputPartitionReader(
   }
 
   override def get(): InternalRow = {
-    val curRow = bufferIter.next.asScala.zipWithIndex.map { case (f, i) =>
-      val v = f.asInstanceOf[String]
-      schema(i).dataType match {
-        case StringType => UTF8String.fromString(v)
-        case IntegerType => v.toInt
-        case LongType => v.toLong
-        case DoubleType => v.toDouble
-        case FloatType => v.toFloat
-        case BooleanType => v.toBoolean
-        case ShortType => v.toShort
-        case DateType =>
-          DateTimeUtils.stringToDate(UTF8String.fromString(v)).getOrElse(null)
-        case TimestampType =>
-          DateTimeUtils.stringToTimestamp(UTF8String.fromString(v)).getOrElse(null)
-        case t => throw GoogleSpreadsheetDataSourceException(s"Not support the $t type right now")
+    val curRow = bufferIter.next.asScala.zipWithIndex
+      .filter(_._2 < schema.size)
+      .map { case (f, i) =>
+        val v = f.asInstanceOf[String]
+        schema(i).dataType match {
+          case StringType => UTF8String.fromString(v)
+          case IntegerType => v.toInt
+          case LongType => v.toLong
+          case DoubleType => v.toDouble
+          case FloatType => v.toFloat
+          case BooleanType => v.toBoolean
+          case ShortType => v.toShort
+          case DateType =>
+            DateTimeUtils.stringToDate(UTF8String.fromString(v)).getOrElse(null)
+          case TimestampType =>
+            DateTimeUtils.stringToTimestamp(UTF8String.fromString(v)).getOrElse(null)
+          case t => throw GoogleSpreadsheetDataSourceException(s"Not support the $t type right now")
+        }
       }
-    }
     InternalRow(curRow: _*)
   }
 
