@@ -2,11 +2,7 @@ package com.github.liam8.spark.datasource.googlesheet
 
 import java.util
 
-import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
-import com.google.api.client.json.jackson2.JacksonFactory
-import com.google.api.services.sheets.v4.{Sheets, SheetsScopes}
-import com.google.auth.http.HttpCredentialsAdapter
-import com.google.auth.oauth2.GoogleCredentials
+import com.google.api.services.sheets.v4.Sheets
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.v2.reader.{DataSourceReader, InputPartition, SupportsPushDownRequiredColumns}
@@ -25,13 +21,7 @@ class GoogleSpreadsheetDataSourceReader(
 
   private val numPartitions = SparkSession.getActiveSession.get.sparkContext.defaultParallelism
 
-  private lazy val sheets: Sheets = new Sheets.Builder(
-    GoogleNetHttpTransport.newTrustedTransport,
-    JacksonFactory.getDefaultInstance,
-    new HttpCredentialsAdapter(GoogleCredentials.fromStream(
-      this.getClass.getClassLoader.getResourceAsStream(credentialsPath)
-    ).createScoped(SheetsScopes.SPREADSHEETS))
-  ).setApplicationName("GoogleSpreadsheetDataSourceReader").build()
+  private lazy val sheets: Sheets = GoogleSpreadsheetDataSource.buildSheet(credentialsPath)
 
   private var prunedSchema: Option[StructType] = None
 

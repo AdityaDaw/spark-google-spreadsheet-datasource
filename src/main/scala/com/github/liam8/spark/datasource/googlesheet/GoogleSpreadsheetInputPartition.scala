@@ -1,10 +1,6 @@
 package com.github.liam8.spark.datasource.googlesheet
 
-import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
-import com.google.api.client.json.jackson2.JacksonFactory
-import com.google.api.services.sheets.v4.{Sheets, SheetsScopes}
-import com.google.auth.http.HttpCredentialsAdapter
-import com.google.auth.oauth2.GoogleCredentials
+import com.google.api.services.sheets.v4.Sheets
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
@@ -48,13 +44,7 @@ class GoogleSpreadsheetInputPartitionReader(
 
   private var bufferIter: Iterator[List[Any]] = _
 
-  private lazy val sheets: Sheets = new Sheets.Builder(
-    GoogleNetHttpTransport.newTrustedTransport,
-    JacksonFactory.getDefaultInstance,
-    new HttpCredentialsAdapter(GoogleCredentials.fromStream(
-      this.getClass.getClassLoader.getResourceAsStream(credentialsPath)
-    ).createScoped(SheetsScopes.SPREADSHEETS))
-  ).build()
+  private lazy val sheets: Sheets = GoogleSpreadsheetDataSource.buildSheet(credentialsPath)
 
   override def next(): Boolean = {
     if (bufferIter != null && bufferIter.hasNext) {
