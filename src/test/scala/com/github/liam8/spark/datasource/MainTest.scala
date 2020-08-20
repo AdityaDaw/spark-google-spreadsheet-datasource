@@ -101,4 +101,15 @@ class MainTest extends FunSuite {
       .load()
     assert(data.count() == 30)
   }
+
+  test("parallelism") {
+    val parallelism = 2
+    val data = spark.read.format(formatName)
+      .option("credentialsPath", credentialFile)
+      .option("spreadsheetId", spreadsheetId)
+      .option("sheetName", sheetName)
+      .option("parallelism", parallelism)
+      .load()
+    assert(data.rdd.partitions.length == parallelism)
+  }
 }

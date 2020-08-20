@@ -7,7 +7,6 @@ import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.api.services.sheets.v4.{Sheets, SheetsScopes}
 import com.google.auth.http.HttpCredentialsAdapter
 import com.google.auth.oauth2.GoogleCredentials
-import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.v2.reader.{DataSourceReader, InputPartition, SupportsPushDownRequiredColumns}
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
@@ -20,10 +19,9 @@ class GoogleSpreadsheetDataSourceReader(
   credentialsPath: String,
   bufferSizeOfEachPartition: Int,
   var schema: Option[StructType] = None,
-  firstRowAsHeader: Boolean
+  firstRowAsHeader: Boolean,
+  parallelism: Int
 ) extends DataSourceReader with SupportsPushDownRequiredColumns {
-
-  private val numPartitions = SparkSession.getActiveSession.get.sparkContext.defaultParallelism
 
   private lazy val sheets: Sheets = new Sheets.Builder(
     GoogleNetHttpTransport.newTrustedTransport,
@@ -65,7 +63,7 @@ class GoogleSpreadsheetDataSourceReader(
   override def planInputPartitions(): util.List[InputPartition[InternalRow]] = {
     val rowCount = sheets.spreadsheets().get(spreadsheetId).setFields("sheets.properties").execute()
       .getSheets.get(0).getProperties.getGridProperties.getRowCount
-    val step = Math.ceil(rowCount / numPartitions).toInt
+    val step = Math.ceil(rowCount / parallelism).toInt
     val start = if (firstRowAsHeader) 2 else 1
     Range.inclusive(start, rowCount, step).map { i =>
       new GoogleSpreadsheetInputPartition(

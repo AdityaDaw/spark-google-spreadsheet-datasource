@@ -1,5 +1,6 @@
 package com.github.liam8.spark.datasource.googlesheet
 
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.sources.DataSourceRegister
 import org.apache.spark.sql.sources.v2.reader.DataSourceReader
 import org.apache.spark.sql.sources.v2.{DataSourceOptions, ReadSupport}
@@ -21,7 +22,9 @@ class GoogleSpreadsheetDataSource extends ReadSupport with DataSourceRegister {
       options.get("credentialsPath").get(),
       options.getInt("bufferSizeOfEachPartition", 10),
       Option(schema),
-      options.getBoolean("firstRowAsHeader", true)
+      options.getBoolean("firstRowAsHeader", true),
+      options.getInt("parallelism",
+        SparkSession.getActiveSession.get.sparkContext.defaultParallelism)
     )
   }
 
