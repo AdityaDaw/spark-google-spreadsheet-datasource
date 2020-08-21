@@ -20,7 +20,7 @@ class GoogleSpreadsheetDataSource extends ReadSupport with DataSourceRegister {
       options.get("spreadsheetId").get(),
       options.get("sheetName").get(),
       options.get("credentialsPath").get(),
-      options.getInt("bufferSizeOfEachPartition", 10),
+      options.getInt("bufferSizeOfEachPartition", 100),
       Option(schema),
       options.getBoolean("firstRowAsHeader", true),
       options.getInt("parallelism",

@@ -99,6 +99,8 @@ class MainTest extends FunSuite {
       .option("spreadsheetId", spreadsheetId)
       .option("sheetName", sheetName)
       .load()
+      .select("b")
+    data.show(50, truncate = false)
     assert(data.count() == 30)
   }
 
