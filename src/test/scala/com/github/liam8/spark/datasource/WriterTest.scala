@@ -3,12 +3,13 @@ package com.github.liam8.spark.datasource
 import org.apache.spark.sql.types.{DoubleType, IntegerType}
 import org.apache.spark.sql.{SaveMode, SparkSession}
 import org.scalatest.FunSuite
+import org.apache.spark.SparkException
 
 class WriterTest extends FunSuite {
 
   private val spark: SparkSession =
     SparkSession.builder()
-      .master("local[1]")
+      .master("local[*]")
       .appName("datasource test")
       .getOrCreate()
 
@@ -80,6 +81,25 @@ class WriterTest extends FunSuite {
     assert(data.count() == 4)
   }
 
-
+  test("not support multiple partitions") {
+    val df = Seq(
+      ("1", "word", "3.14"),
+      ("2", "word2", "3.145"),
+      ("3", "word3", "3.145"),
+      ("4", "word4", "3.145")
+    ).toDF("a", "b", "c")
+      .repartition(2)
+      .select('a.cast(IntegerType), 'b, 'c.cast(DoubleType))
+    df.printSchema()
+    df.show(truncate = false)
+    assertThrows[SparkException](
+      df.write.format(formatName)
+        .option("credentialsPath", credentialFile)
+        .option("spreadsheetId", spreadsheetId)
+        .option("sheetName", sheetName)
+        .mode(SaveMode.Overwrite)
+        .save()
+    )
+  }
 
 }

@@ -43,9 +43,12 @@ class GoogleSpreadsheetDataWriterFactory(
 ) extends DataWriterFactory[InternalRow] {
   override def createDataWriter(
     partitionId: Int, taskId: Long, epochId: Long): DataWriter[InternalRow] = {
+    if (partitionId > 0) {
+      throw GoogleSpreadsheetDataSourceException(
+        "GoogleSpreadsheetDataSource ONLY support data with 1 partition")
+    }
     new GoogleSpreadsheetDataWriter(
-      mode, schema, credentialsPath, spreadsheetId, sheetName,
-      bufferSize, partitionId, firstRowAsHeader)
+      mode, schema, credentialsPath, spreadsheetId, sheetName, bufferSize, firstRowAsHeader)
   }
 
 }
@@ -57,7 +60,6 @@ class GoogleSpreadsheetDataWriter(
   spreadsheetId: String,
   sheetName: String,
   bufferSize: Int,
-  partitionId: Int,
   firstRowAsHeader: Boolean
 ) extends DataWriter[InternalRow] {
 
@@ -66,6 +68,8 @@ class GoogleSpreadsheetDataWriter(
   private val buffer = mutable.Buffer[util.List[AnyRef]]()
 
   private var haveWrittenHeader = false
+
+  private val VALUE_INPUT_OPTION = "RAW"
 
   override def write(record: InternalRow): Unit = {
     if (!haveWrittenHeader && firstRowAsHeader) {
@@ -92,20 +96,19 @@ class GoogleSpreadsheetDataWriter(
   }
 
   private def writeToSheet() {
-    val finalSheetName = if (partitionId > 0) s"$sheetName-$partitionId" else sheetName
     val body = new ValueRange().setValues(buffer.asJava)
     if (saveMode == SaveMode.Overwrite) {
       sheets.spreadsheets.values
-        .clear(spreadsheetId, finalSheetName, new ClearValuesRequest())
+        .clear(spreadsheetId, sheetName, new ClearValuesRequest())
         .execute
       sheets.spreadsheets.values
-        .update(spreadsheetId, finalSheetName, body)
-        .setValueInputOption("RAW")
+        .update(spreadsheetId, sheetName, body)
+        .setValueInputOption(VALUE_INPUT_OPTION)
         .execute
     } else {
       sheets.spreadsheets.values
-        .append(spreadsheetId, finalSheetName, body)
-        .setValueInputOption("RAW")
+        .append(spreadsheetId, sheetName, body)
+        .setValueInputOption(VALUE_INPUT_OPTION)
         .execute
     }
     buffer.clear()
