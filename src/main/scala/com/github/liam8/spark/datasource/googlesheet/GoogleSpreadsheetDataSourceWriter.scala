@@ -1,5 +1,7 @@
 package com.github.liam8.spark.datasource.googlesheet
 
+import java.util
+
 import com.google.api.services.sheets.v4.Sheets
 import com.google.api.services.sheets.v4.model.ValueRange
 import org.apache.spark.sql.SaveMode
@@ -21,7 +23,8 @@ class GoogleSpreadsheetDataSourceWriter(
 ) extends DataSourceWriter {
   override def createWriterFactory(): DataWriterFactory[InternalRow] = {
     new GoogleSpreadsheetDataWriterFactory(
-      mode, schema, credentialsPath, spreadsheetId, sheetName, bufferSizeOfEachPartition)
+      mode, schema, credentialsPath, spreadsheetId, sheetName,
+      bufferSizeOfEachPartition, firstRowAsHeader)
   }
 
   override def commit(messages: Array[WriterCommitMessage]): Unit = {}
@@ -35,12 +38,14 @@ class GoogleSpreadsheetDataWriterFactory(
   credentialsPath: String,
   spreadsheetId: String,
   sheetName: String,
-  bufferSize: Int
+  bufferSize: Int,
+  firstRowAsHeader: Boolean
 ) extends DataWriterFactory[InternalRow] {
   override def createDataWriter(
     partitionId: Int, taskId: Long, epochId: Long): DataWriter[InternalRow] = {
     new GoogleSpreadsheetDataWriter(
-      mode, schema, credentialsPath, spreadsheetId, sheetName, bufferSize, partitionId)
+      mode, schema, credentialsPath, spreadsheetId, sheetName,
+      bufferSize, partitionId, firstRowAsHeader)
   }
 
 }
@@ -52,21 +57,33 @@ class GoogleSpreadsheetDataWriter(
   spreadsheetId: String,
   sheetName: String,
   bufferSize: Int,
-  partitionId: Int
+  partitionId: Int,
+  firstRowAsHeader: Boolean
 ) extends DataWriter[InternalRow] {
 
   private lazy val sheets: Sheets = GoogleSpreadsheetDataSource.buildSheet(credentialsPath)
 
-  private val buffer = mutable.Buffer[InternalRow]()
+  private val buffer = mutable.Buffer[util.List[AnyRef]]()
+
+  private var haveWrittenHeader = false
 
   override def write(record: InternalRow): Unit = {
-    buffer.append(record.copy())
+    if (!haveWrittenHeader && firstRowAsHeader) {
+      buffer.append(schema.names.toSeq.map(_.asInstanceOf[AnyRef]).asJava)
+      haveWrittenHeader = true
+    }
     if (buffer.size >= bufferSize) {
       writeToSheet()
     }
+    buffer.append(
+      record.toSeq(schema).map { v =>
+        if (v != null) v.toString.asInstanceOf[AnyRef] else ""
+      }.asJava
+    )
   }
 
   override def commit(): WriterCommitMessage = {
+    writeToSheet()
     GoogleSpreadsheetCommitMessage
   }
 
@@ -74,18 +91,16 @@ class GoogleSpreadsheetDataWriter(
     buffer.clear()
   }
 
+  // todo support append mode
   private def writeToSheet() {
-    // todo support append mode
-    val range = if (partitionId > 0) s"$sheetName-$partitionId!1:1" else s"$sheetName!1:1"
-    val body = new ValueRange().setValues(
-      buffer.map(
-        _.toSeq(schema).map(_.asInstanceOf[AnyRef]).asJava
-      ).asJava
-    )
+    val finalSheetName = if (partitionId > 0) s"$sheetName-$partitionId" else sheetName
+    val range = s"$finalSheetName!A1"
+    val body = new ValueRange().setValues(buffer.asJava)
     sheets.spreadsheets.values
       .update(spreadsheetId, range, body)
       .setValueInputOption("RAW")
       .execute
+    buffer.clear()
   }
 }
 
