@@ -5,7 +5,7 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.{DataTypes, StructField, StructType}
 import org.scalatest.FunSuite
 
-class MainTest extends FunSuite {
+class ReaderTest extends FunSuite {
 
   private val spark: SparkSession =
     SparkSession.builder()
