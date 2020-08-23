@@ -97,19 +97,19 @@ class GoogleSpreadsheetDataWriter(
 
   private def writeToSheet() {
     val body = new ValueRange().setValues(buffer.asJava)
-    if (saveMode == SaveMode.Overwrite) {
-      sheets.spreadsheets.values
+    saveMode match {
+      case SaveMode.Overwrite => sheets.spreadsheets.values
         .clear(spreadsheetId, sheetName, new ClearValuesRequest())
         .execute
-      sheets.spreadsheets.values
-        .update(spreadsheetId, sheetName, body)
-        .setValueInputOption(VALUE_INPUT_OPTION)
-        .execute
-    } else {
-      sheets.spreadsheets.values
+        sheets.spreadsheets.values
+          .update(spreadsheetId, sheetName, body)
+          .setValueInputOption(VALUE_INPUT_OPTION)
+          .execute
+      case SaveMode.Append => sheets.spreadsheets.values
         .append(spreadsheetId, sheetName, body)
         .setValueInputOption(VALUE_INPUT_OPTION)
         .execute
+      case x => throw GoogleSpreadsheetDataSourceException(s"do NOT support the `$x` save mode up to now")
     }
     buffer.clear()
   }

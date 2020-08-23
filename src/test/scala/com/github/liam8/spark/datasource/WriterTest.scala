@@ -1,5 +1,6 @@
 package com.github.liam8.spark.datasource
 
+import com.github.liam8.spark.datasource.googlesheet.GoogleSpreadsheetDataSourceException
 import org.apache.spark.sql.types.{DoubleType, IntegerType}
 import org.apache.spark.sql.{SaveMode, SparkSession}
 import org.scalatest.FunSuite
@@ -100,6 +101,38 @@ class WriterTest extends FunSuite {
         .mode(SaveMode.Overwrite)
         .save()
     )
+  }
+
+  test("not support ErrorIfExists save mode") {
+    val df = Seq(
+      ("1", "word", "3.14")
+    ).toDF("a", "b", "c")
+      .coalesce(1)
+    val e = intercept[SparkException](
+      df.write.format(formatName)
+        .option("credentialsPath", credentialFile)
+        .option("spreadsheetId", spreadsheetId)
+        .option("sheetName", sheetName)
+        .mode(SaveMode.ErrorIfExists)
+        .save()
+    )
+    assert(e.getCause.getCause.isInstanceOf[GoogleSpreadsheetDataSourceException])
+  }
+
+  test("not support Ignore save mode") {
+    val df = Seq(
+      ("1", "word", "3.14")
+    ).toDF("a", "b", "c")
+      .coalesce(1)
+    val e = intercept[SparkException](
+      df.write.format(formatName)
+        .option("credentialsPath", credentialFile)
+        .option("spreadsheetId", spreadsheetId)
+        .option("sheetName", sheetName)
+        .mode(SaveMode.Ignore)
+        .save()
+    )
+    assert(e.getCause.getCause.isInstanceOf[GoogleSpreadsheetDataSourceException])
   }
 
 }
