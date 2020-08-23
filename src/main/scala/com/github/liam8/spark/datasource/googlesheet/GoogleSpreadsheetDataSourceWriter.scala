@@ -3,7 +3,7 @@ package com.github.liam8.spark.datasource.googlesheet
 import java.util
 
 import com.google.api.services.sheets.v4.Sheets
-import com.google.api.services.sheets.v4.model.ValueRange
+import com.google.api.services.sheets.v4.model.{ClearValuesRequest, ValueRange}
 import org.apache.spark.sql.SaveMode
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.v2.writer.{DataSourceWriter, DataWriter, DataWriterFactory, WriterCommitMessage}
@@ -51,7 +51,7 @@ class GoogleSpreadsheetDataWriterFactory(
 }
 
 class GoogleSpreadsheetDataWriter(
-  mode: SaveMode,
+  saveMode: SaveMode,
   schema: StructType,
   credentialsPath: String,
   spreadsheetId: String,
@@ -91,15 +91,23 @@ class GoogleSpreadsheetDataWriter(
     buffer.clear()
   }
 
-  // todo support append mode
   private def writeToSheet() {
     val finalSheetName = if (partitionId > 0) s"$sheetName-$partitionId" else sheetName
-    val range = s"$finalSheetName!A1"
     val body = new ValueRange().setValues(buffer.asJava)
-    sheets.spreadsheets.values
-      .update(spreadsheetId, range, body)
-      .setValueInputOption("RAW")
-      .execute
+    if (saveMode == SaveMode.Overwrite) {
+      sheets.spreadsheets.values
+        .clear(spreadsheetId, finalSheetName, new ClearValuesRequest())
+        .execute
+      sheets.spreadsheets.values
+        .update(spreadsheetId, finalSheetName, body)
+        .setValueInputOption("RAW")
+        .execute
+    } else {
+      sheets.spreadsheets.values
+        .append(spreadsheetId, finalSheetName, body)
+        .setValueInputOption("RAW")
+        .execute
+    }
     buffer.clear()
   }
 }
