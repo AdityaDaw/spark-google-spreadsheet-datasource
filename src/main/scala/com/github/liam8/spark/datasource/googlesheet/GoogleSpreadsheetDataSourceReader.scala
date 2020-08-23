@@ -2,6 +2,8 @@ package com.github.liam8.spark.datasource.googlesheet
 
 import java.util
 
+import com.google.api.services.sheets.v4.Sheets
+import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.sources.v2.reader.{DataSourceReader, InputPartition, InputPartitionReader, SupportsPushDownRequiredColumns}
@@ -110,13 +112,7 @@ class GoogleSpreadsheetInputPartitionReader(
 
   private var bufferIter: Iterator[List[Any]] = _
 
-  private lazy val sheets: Sheets = new Sheets.Builder(
-    GoogleNetHttpTransport.newTrustedTransport,
-    JacksonFactory.getDefaultInstance,
-    new HttpCredentialsAdapter(GoogleCredentials.fromStream(
-      this.getClass.getClassLoader.getResourceAsStream(credentialsPath)
-    ).createScoped(SheetsScopes.SPREADSHEETS))
-  ).build()
+  private lazy val sheets: Sheets = GoogleSpreadsheetDataSource.buildSheet(credentialsPath)
 
   override def next(): Boolean = {
     if (bufferIter != null && bufferIter.hasNext) {
