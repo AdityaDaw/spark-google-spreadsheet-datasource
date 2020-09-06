@@ -36,3 +36,6 @@ jobs:
 
     - name: complie
       run: mvn compile
+
+    - name: publish
+      run: mvn deploy -Dregistry=https://maven.pkg.github.com/Liam8 -Dtoken=${{ secrets.GITHUB_TOKEN }}
