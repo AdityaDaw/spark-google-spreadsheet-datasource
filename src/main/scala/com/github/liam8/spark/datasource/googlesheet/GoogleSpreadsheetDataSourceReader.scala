@@ -22,7 +22,7 @@ class GoogleSpreadsheetDataSourceReader(
   parallelism: Int
 ) extends DataSourceReader with SupportsPushDownRequiredColumns {
 
-  private lazy val sheets: Sheets = GoogleSpreadsheetDataSource.buildSheet(credentialsPath)
+  private lazy val sheetService: Sheets = GoogleSpreadsheetDataSource.buildSheet(credentialsPath)
 
   private var prunedSchema: Option[StructType] = None
 
@@ -45,7 +45,7 @@ class GoogleSpreadsheetDataSourceReader(
       throw GoogleSpreadsheetDataSourceException(
         "can not infer schema without header, please specify schema manually")
     }
-    val head = sheets.spreadsheets().values()
+    val head = sheetService.spreadsheets().values()
       .get(spreadsheetId, s"$sheetName!1:1").execute().getValues.asScala
     if (head.isEmpty) {
       throw GoogleSpreadsheetDataSourceException("Can not refer schema from empty sheet.")
@@ -54,8 +54,12 @@ class GoogleSpreadsheetDataSourceReader(
   }
 
   override def planInputPartitions(): util.List[InputPartition[InternalRow]] = {
-    val rowCount = sheets.spreadsheets().get(spreadsheetId).setFields("sheets.properties").execute()
-      .getSheets.get(0).getProperties.getGridProperties.getRowCount
+    val sheets = sheetService.spreadsheets().get(spreadsheetId)
+      .setFields("sheets.properties").execute().getSheets
+    val sheet = sheets.asScala.find(_.getProperties.getTitle == sheetName).getOrElse(
+      throw GoogleSpreadsheetDataSourceException(s"Can't find the sheet named $sheetName")
+    )
+    val rowCount = sheet.getProperties.getGridProperties.getRowCount
     val step = Math.ceil(rowCount / parallelism).toInt
     val start = if (firstRowAsHeader) 2 else 1
     Range.inclusive(start, rowCount, step).map { i =>

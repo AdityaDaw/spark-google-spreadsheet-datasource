@@ -19,13 +19,15 @@ class ReaderTest extends FunSuite {
 
   private val spreadsheetId = "1pJIU-cFzemvuxuDJ7zssV1J2j80QvUiXMZiGy9Ujoa8"
 
-  private val sheetName = "Sheet1"
+  private val sheetName1 = "Sheet1"
+
+  private val sheetName2 = "Sheet2"
 
   test("infer schema") {
     val data = spark.read.format(formatName)
       .option("credentialsPath", credentialFile)
       .option("spreadsheetId", spreadsheetId)
-      .option("sheetName", sheetName)
+      .option("sheetName", sheetName1)
       .load()
     data.printSchema()
     assert(data.schema.contains(StructField("b", DataTypes.StringType)))
@@ -44,7 +46,7 @@ class ReaderTest extends FunSuite {
     val data = spark.read.format(formatName)
       .option("credentialsPath", credentialFile)
       .option("spreadsheetId", spreadsheetId)
-      .option("sheetName", sheetName)
+      .option("sheetName", sheetName1)
       .schema(schema)
       .load()
     data.printSchema()
@@ -61,7 +63,7 @@ class ReaderTest extends FunSuite {
     val data = spark.read.format(formatName)
       .option("credentialsPath", credentialFile)
       .option("spreadsheetId", spreadsheetId)
-      .option("sheetName", sheetName)
+      .option("sheetName", sheetName1)
       .option("firstRowAsHeader", value = false)
       .schema(schema)
       .load()
@@ -75,7 +77,7 @@ class ReaderTest extends FunSuite {
       spark.read.format(formatName)
         .option("credentialsPath", credentialFile)
         .option("spreadsheetId", spreadsheetId)
-        .option("sheetName", sheetName)
+        .option("sheetName", sheetName1)
         .option("firstRowAsHeader", value = false)
         .load()
     )
@@ -85,7 +87,7 @@ class ReaderTest extends FunSuite {
     val data = spark.read.format(formatName)
       .option("credentialsPath", credentialFile)
       .option("spreadsheetId", spreadsheetId)
-      .option("sheetName", sheetName)
+      .option("sheetName", sheetName1)
       .load()
       .select("a", "b", "day")
     data.printSchema()
@@ -93,15 +95,26 @@ class ReaderTest extends FunSuite {
     assert(data.schema.contains(StructField("b", DataTypes.StringType)))
   }
 
-  test("row count") {
+  test("row count on sheet1") {
     val data = spark.read.format(formatName)
       .option("credentialsPath", credentialFile)
       .option("spreadsheetId", spreadsheetId)
-      .option("sheetName", sheetName)
+      .option("sheetName", sheetName1)
       .load()
       .select("b")
     data.show(50, truncate = false)
     assert(data.count() == 30)
+  }
+
+  test("row count on sheet2") {
+    val data = spark.read.format(formatName)
+      .option("credentialsPath", credentialFile)
+      .option("spreadsheetId", spreadsheetId)
+      .option("sheetName", sheetName2)
+      .load()
+      .select("a")
+    data.show(50, truncate = false)
+    assert(data.count() == 60)
   }
 
   test("parallelism") {
@@ -109,7 +122,7 @@ class ReaderTest extends FunSuite {
     val data = spark.read.format(formatName)
       .option("credentialsPath", credentialFile)
       .option("spreadsheetId", spreadsheetId)
-      .option("sheetName", sheetName)
+      .option("sheetName", sheetName1)
       .option("parallelism", parallelism)
       .load()
     assert(data.rdd.partitions.length == parallelism)
