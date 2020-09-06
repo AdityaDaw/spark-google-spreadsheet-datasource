@@ -14,6 +14,14 @@
         <spark.version>2.4.5</spark.version>
     </properties>
 
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub Liam8 Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/Liam8/spark-google-spreadsheet-datasource</url>
+        </repository>
+    </distributionManagement>
+
     <repositories>
         <repository>
             <id>scala-tools.org</id>
