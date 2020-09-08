@@ -30,4 +30,6 @@ jobs:
       - name: publish
         env:
           TOKEN: ${{ github.token }}
-        run: mvn deploy -Dregistry=https://maven.pkg.github.com/Liam8 -Dtoken=$TOKEN
+        run: |
+          echo "$TOKEN"
+          mvn deploy -Dregistry=https://maven.pkg.github.com/Liam8 -Dtoken="$TOKEN"
