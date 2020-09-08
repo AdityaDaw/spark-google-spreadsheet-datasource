@@ -1,13 +1,12 @@
 name: release
 
 on:
-  push:
-    tags: [ V** ]
+  release:
+    types: [released, prereleased]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
+  publish-package:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
@@ -29,4 +28,6 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: publish
-        run: mvn deploy -Dregistry=https://maven.pkg.github.com/Liam8 -Dtoken='${{ github.token }}'
+        env:
+          TOKEN: ${{ github.token }}
+        run: mvn deploy -Dregistry=https://maven.pkg.github.com/Liam8 -Dtoken=$TOKEN
