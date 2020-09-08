@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.liam8</groupId>
     <artifactId>spark-google-spreadsheet-datasource</artifactId>
-    <version>1.0</version>
+    <version>1.0.0</version>
     <packaging>jar</packaging>
     <properties>
         <encoding>UTF-8</encoding>
