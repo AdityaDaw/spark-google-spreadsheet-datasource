@@ -18,20 +18,17 @@ jobs:
     runs-on: ubuntu-latest
 
     # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-    - name: install jdk
-      run: sudo apt install openjdk-8-jdk
-    
-    - name: install maven
-      run: sudo apt install maven
-        
+    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - uses: actions/checkout@v2
+    - uses: actions/setup-java@v1
+      with:
+        java-version: 1.8
+
     - name: print versions
       run: |
         lsb_release -a
         java -version
         mvn -v
-    
-    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-    - uses: actions/checkout@v2
+
     - name: complie
       run: mvn compile
