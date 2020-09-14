@@ -109,7 +109,8 @@ class GoogleSpreadsheetDataWriter(
         .append(spreadsheetId, sheetName, body)
         .setValueInputOption(VALUE_INPUT_OPTION)
         .execute
-      case x => throw GoogleSpreadsheetDataSourceException(s"do NOT support the `$x` save mode up to now")
+      case x => throw GoogleSpreadsheetDataSourceException(
+        s"do NOT support the `$x` save mode up to now")
     }
     buffer.clear()
   }
