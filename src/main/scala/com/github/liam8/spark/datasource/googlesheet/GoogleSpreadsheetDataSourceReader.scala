@@ -56,7 +56,9 @@ class GoogleSpreadsheetDataSourceReader(
   override def planInputPartitions(): util.List[InputPartition[InternalRow]] = {
     val sheets = sheetService.spreadsheets().get(spreadsheetId)
       .setFields("sheets.properties").execute().getSheets
-    val sheet = sheets.asScala.find(_.getProperties.getTitle == sheetName).getOrElse(
+    // sheetName is case insensitive
+    val tmpSheetName = sheetName.toLowerCase
+    val sheet = sheets.asScala.find(_.getProperties.getTitle.toLowerCase == tmpSheetName).getOrElse(
       throw GoogleSpreadsheetDataSourceException(s"Can't find the sheet named $sheetName")
     )
     val rowCount = sheet.getProperties.getGridProperties.getRowCount
